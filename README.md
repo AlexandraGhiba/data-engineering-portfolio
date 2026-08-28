@@ -1,222 +1,282 @@
-      Data Engineering Portfolio
+# 🚀 Data Engineering Portfolio
 
-      A portfolio of end-to-end batch and streaming data engineering
-      projects built with Python, SQL and modern open-source tools.
+A portfolio of **end-to-end data engineering projects** covering batch processing, real-time streaming, orchestration, dimensional modeling, data quality, and analytics.
 
-      The projects demonstrate API ingestion, event streaming, orchestration,
-      analytical storage, dbt transformations, dimensional modeling, SCD Type
-      2, data quality testing and reporting.
+Built with **Python, SQL, dbt, DuckDB, Apache Airflow, Apache Kafka, Dagster, Docker, and Parquet**.
 
-      Stack
+---
 
-      Area              Technologies
+## 🛠️ Tech Stack
 
-      Programming       Python · SQL
-      Transformation    dbt
-      Storage           DuckDB · Parquet
-      Ingestion         dlt · REST APIs · WebSockets
-      Orchestration     Apache Airflow · Dagster
-      Streaming         Apache Kafka
-      Modeling          Star Schema · SCD Type 2 · Incremental Models
-      Infrastructure    Docker
-      Reporting         Google Sheets · Looker Studio
-      Version Control   Git · GitHub
+| Area | Technologies |
+|---|---|
+| **Programming** | Python · SQL |
+| **Transformation** | dbt |
+| **Storage** | DuckDB · Parquet |
+| **Ingestion** | dlt · REST APIs · WebSockets · XML |
+| **Orchestration** | Apache Airflow · Dagster |
+| **Streaming** | Apache Kafka |
+| **Data Modeling** | Star Schema · SCD Type 2 · Incremental Models |
+| **Infrastructure** | Docker |
+| **Reporting** | Google Sheets · Looker Studio |
+| **Version Control** | Git · GitHub |
 
-      Projects
+---
 
-      1. 🌦️ Weather Data Pipeline
+# 📂 Projects
 
-      Batch pipeline that retrieves hourly weather data from the Open-Meteo
-      API for five Romanian cities and transforms it into daily analytical
-      models.
+## 1. 🌦️ Weather Data Pipeline
 
-      Open-Meteo API → Python → dlt → DuckDB → dbt → Data Quality Tests
+A batch data pipeline that retrieves hourly weather data from the **Open-Meteo API** for five Romanian cities and transforms it into daily analytical models.
 
-      Demonstrates: REST API ingestion, normalization, analytical storage,
-      SQL transformations and automated validation.
+```text
+Open-Meteo API
+      ↓
+Python + dlt
+      ↓
+DuckDB
+      ↓
+dbt Transformations
+      ↓
+Data Quality Tests
+```
+
+**Key concepts:** REST API ingestion · normalization · analytical storage · SQL transformations · automated testing
+
+**Stack:** `Python` `dlt` `DuckDB` `dbt` `SQL`
+
+📁 [`dbt_weather/`](./dbt_weather/)
 
-      Stack: Python · dlt · DuckDB · dbt · SQL
+---
 
-      2. ⚡ ENTSO-E Energy Price Pipeline
+## 2. ⚡ ENTSO-E Energy Price Pipeline
 
-      Batch pipeline that extracts day-ahead electricity prices from the
-      ENTSO-E Transparency Platform, parses XML responses and produces
-      daily analytical outputs.
+A batch pipeline that extracts Romanian day-ahead electricity prices from the **ENTSO-E Transparency Platform**, handles XML responses and timezone-aware data, and produces validated daily analytics.
 
-      ENTSO-E API → Python → XML Parsing → dlt → DuckDB → dbt → Daily Report
+```text
+ENTSO-E API
+      ↓
+Python + XML Parsing
+      ↓
+dlt
+      ↓
+DuckDB
+      ↓
+dbt
+      ↓
+Daily Price Report
+```
 
-      Demonstrates: authenticated API ingestion, XML parsing, dbt
-      transformations and data quality testing.
+**Key concepts:** authenticated API ingestion · XML parsing · timezone handling · transformations · data quality
 
-      Stack: Python · ENTSO-E API · dlt · DuckDB · dbt · SQL
+**Stack:** `Python` `dlt` `DuckDB` `dbt` `SQL`
 
-      3. 🛒 Kaggle Superstore --- Star Schema
+📁 [`entsoe_energy/`](./entsoe_energy/)
+
+---
+
+## 3. 🛒 Kaggle Retail Star Schema
+
+An analytics engineering project that transforms a retail dataset into a dimensional **Star Schema** using dbt and DuckDB.
+
+```text
+Excel Dataset
+      ↓
+Python Raw Loader
+      ↓
+DuckDB
+      ↓
+dbt Staging
+      ↓
+Dimensions + Fact
+      ↓
+dbt Tests
+```
+
+### Data Model
+
+```text
+             dim_customer
+                  │
+dim_date ─── fact_orders ─── dim_product
+                  │
+             dim_location
+```
+
+**Results:**
+
+- **9,994** fact rows
+- **5,009** distinct orders
+- **1,894** products
+- **793** customers
+- **21 / 21 dbt tests passing**
+
+**Key concepts:** Star Schema · dimensional modeling · surrogate keys · fact/dimension design · reproducible pipelines
+
+**Stack:** `Python` `dbt` `DuckDB` `SQL` `pandas`
+
+📁 [`kaggle-star-schema/`](./kaggle-star-schema/)
+
+---
+
+## 4. ₿ Crypto Kafka Pipeline
+
+A **real-time streaming pipeline** that captures live BTCUSDT trades from the Binance WebSocket API and processes them through Kafka, DuckDB, dbt, and Dagster.
+
+```text
+Binance WebSocket
+      ↓
+Kafka Producer
+      ↓
+Kafka Topic
+      ↓
+Kafka Consumer
+      ↓
+DuckDB
+      ↓
+dbt
+      ↓
+Anomaly Detection
+      ↓
+Google Sheets
+      ↓
+Looker Studio
+```
+
+Dagster orchestrates the analytical workflow, including dbt transformations, testing, anomaly detection, and reporting.
+
+**Key concepts:** real-time streaming · producer/consumer architecture · orchestration · anomaly detection · automated reporting
+
+**Stack:** `Python` `Kafka` `WebSockets` `DuckDB` `dbt` `Dagster` `Docker`
+
+📁 [`crypto-kafka-pipeline/`](./crypto-kafka-pipeline/)
+
+---
+
+## 5. 🚲 Divvy Bike-Share Data Pipeline
+
+A production-style monthly batch pipeline processing historical **Divvy bike-share trips** with Apache Airflow, Parquet, DuckDB, and dbt.
+
+```text
+Divvy ZIP / CSV
+      ↓
+Apache Airflow
+      ↓
+Python Ingestion
+      ↓
+Partitioned Parquet
+      ↓
+DuckDB
+      ↓
+dbt Staging + Intermediate
+      ↓
+SCD Type 2 Station History
+      ↓
+dim_stations + fct_trips
+      ↓
+Analytical Marts
+      ↓
+dbt Tests
+```
 
-      Dimensional modeling project that transforms the Kaggle Superstore
-      dataset into an analytical Star Schema.
+### Results
 
-      Kaggle Dataset → Staging → Dimensions + Fact → dbt Tests → Business Validation
+| Metric | Result |
+|---|---:|
+| Raw trips processed | **669,724** |
+| Analytical fact rows | **669,493** |
+| Period | **Jan–Mar 2024** |
+| dbt validation | **12 PASS · 1 WARN · 0 ERROR** |
 
-      The final model includes fact_orders, dim_date, dim_customer,
-      dim_location and dim_product.
+### Engineering Features
 
-      9,994 fact rows · 21 dbt data quality tests
+- Parameterized monthly **Airflow orchestration**
+- Parquet partitioning by `year` and `month`
+- Incremental `fct_trips` keyed by `ride_id`
+- **SCD Type 2** station history
+- Time-aware station foreign keys
+- Station imbalance and monthly usage marts
+- Station rename / relocation analysis
+- Automated dbt data-quality tests
+- Idempotent monthly processing
 
-      Demonstrates: dimensional modeling, surrogate keys, fact/dimension
-      design and business validation.
+**Key concepts:** orchestration · incremental processing · SCD Type 2 · temporal modeling · idempotency · data quality
 
-      Stack: Python · dbt · DuckDB · SQL
+**Stack:** `Python` `Apache Airflow` `Parquet` `DuckDB` `dbt` `SQL` `Docker`
 
-      4. ₿ Crypto Kafka Pipeline --- Real-Time Streaming
+📁 [`divvy-data-pipeline/`](./divvy-data-pipeline/)
 
-      Real-time pipeline that captures BTCUSDT trades from the Binance
-      WebSocket API and processes them through Kafka, DuckDB and dbt.
+---
 
-      Binance WebSocket
-            ↓
-      Kafka Producer
-            ↓
-      Kafka Topic
-            ↓
-      Kafka Consumer
-            ↓
-      DuckDB → dbt → Anomaly Detection
-            ↓
-      Google Sheets → Looker Studio
+# 🧠 What This Portfolio Demonstrates
 
-      Dagster orchestrates transformations, tests, anomaly detection and
-      reporting.
+Across the five projects:
 
-      Demonstrates: real-time streaming, producer/consumer architecture,
-      orchestration and anomaly detection.
+- **Batch and real-time data pipelines**
+- REST API, WebSocket and XML ingestion
+- Apache Kafka producer / consumer architecture
+- Apache Airflow and Dagster orchestration
+- DuckDB analytical storage
+- Partitioned Parquet datasets
+- dbt staging, intermediate and mart layers
+- Star Schema dimensional modeling
+- SCD Type 2 historical modeling
+- Incremental and idempotent processing
+- Automated data-quality testing
+- Anomaly detection
+- Analytical reporting
+- Docker-based reproducible environments
 
-      Stack: Python · Kafka · Binance WebSocket · DuckDB · dbt · Dagster ·
-      Docker
+---
 
-      5. 🚲 Divvy Bike-Share Data Pipeline
+# 📁 Repository Structure
 
-      Monthly batch pipeline that processes historical Divvy bike-share
-      trips using Apache Airflow, Parquet, DuckDB and dbt.
+```text
+data-engineering-portfolio/
+│
+├── crypto-kafka-pipeline/
+├── dbt_weather/
+├── divvy-data-pipeline/
+├── entsoe_energy/
+├── kaggle-star-schema/
+│
+├── .gitignore
+└── README.md
+```
 
-      Divvy ZIP / CSV
-            ↓
-      Apache Airflow
-            ↓
-      Python Ingestion
-            ↓
-      Partitioned Parquet
-            ↓
-      DuckDB
-            ↓
-      dbt Staging + Intermediate
-            ↓
-      SCD Type 2 Station History
-            ↓
-      dim_stations + fct_trips
-            ↓
-      Analytical Marts + dbt Tests
+Each project contains its own **README** with architecture, implementation details, setup instructions, and execution steps.
 
-      The project processes 669,724 raw trips from January--March 2024
-      into 669,493 unique analytical fact rows.
+---
 
-      Key features include:
+# ▶️ Getting Started
 
-      parameterized monthly Airflow orchestration
+Clone the complete portfolio:
 
-      Parquet partitioning by year and month
+```bash
+git clone https://github.com/AlexandraGhiba/data-engineering-portfolio.git
+cd data-engineering-portfolio
+```
 
-      incremental fct_trips keyed by ride_id
+The projects are intentionally independent. Open the README inside the project you want to explore for project-specific setup and execution instructions.
 
-      SCD Type 2 station history
+> **Note:** The Divvy and Crypto Kafka projects use Docker-based infrastructure. The remaining projects can be run independently without starting Kafka or Airflow.
 
-      time-aware station foreign keys
+---
 
-      station imbalance and monthly usage marts
+# 🔄 Engineering Approach
 
-      station rename/relocation and potential re-issued ID analysis
+The projects follow a common data engineering lifecycle:
 
-      automated dbt data quality tests
+```text
+Extract → Ingest → Store → Transform → Test → Validate → Analyze
+```
 
-      Final dbt validation: 12 PASS · 1 WARN · 0 ERROR
+The focus is on building **reproducible, testable, and maintainable data pipelines** using modern open-source data engineering tools.
 
-      Demonstrates: Airflow orchestration, incremental processing, SCD
-      Type 2, temporal modeling, idempotency and data quality.
+---
 
-      Stack: Python · Apache Airflow · Parquet · DuckDB · dbt · SQL ·
-      Docker
+# 👩‍💻 Author
 
-      Project Structure
+**Ghiba Alexandra**
 
-      data-engineering-portfolio/
-      │
-      ├── weather/
-      ├── entsoe_energy/
-      ├── kaggle-star-schema/
-      ├── crypto-kafka-pipeline/
-      ├── divvy-data-pipeline/
-      │
-      └── README.md
-
-      Each project contains its own README with architecture, implementation
-      details and run instructions.
-
-      Key Capabilities
-
-      Across the five projects, the portfolio demonstrates:
-
-      batch and real-time data pipelines
-
-      REST API, WebSocket and XML ingestion
-
-      Apache Kafka producer/consumer architecture
-
-      Apache Airflow and Dagster orchestration
-
-      DuckDB analytical storage
-
-      partitioned Parquet datasets
-
-      dbt staging, intermediate and mart models
-
-      Star Schema and dimensional modeling
-
-      SCD Type 2 historical modeling
-
-      incremental and idempotent processing
-
-      automated data quality testing
-
-      anomaly detection and analytical reporting
-
-      Docker-based reproducible environments
-
-      How to Run
-
-      Clone the portfolio:
-
-      git clone https://github.com/AlexandraGhiba/data-engineering-portfolio.git
-      cd data-engineering-portfolio
-
-      The projects are intentionally independent. Open the README inside the
-      project you want to run and follow its project-specific instructions.
-
-      The Divvy and Crypto Kafka projects use Docker-based
-      infrastructure. The other projects can be run independently without
-      starting Kafka or Airflow.
-
-      Reproducibility
-
-      Each project follows the same general engineering pattern:
-
-      Extract → Ingest → Store → Transform → Test → Validate → Analyze
-
-      The projects are designed to run locally using open-source data
-      engineering technologies.
-
-      Author
-
-      Ghiba Alexandra
-
-      Data Engineering portfolio focused on practical experience building
-      reliable pipelines from ingestion and storage through transformation,
-      orchestration, validation and analytics.
+Data Engineering portfolio focused on practical experience building reliable pipelines from **ingestion and storage through transformation, orchestration, data quality, and analytics**.
