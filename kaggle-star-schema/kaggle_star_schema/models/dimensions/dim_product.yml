@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: dim_product
+    description: "Product dimension containing one row per unique product."
+
+    columns:
+      - name: product_key
+        description: "Warehouse-generated surrogate key for the product."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: product_id
+        description: "Business key identifying the product in the source system."
+        data_tests:
+          - not_null
+
+
+      - name: product_name
+        description: "Name of the product."
+        data_tests:
+          - not_null
+
+      - name: category
+        description: "Product category."
+        data_tests:
+          - not_null
+
+      - name: sub_category
+        description: "Product sub-category."
+        data_tests:
+          - not_null

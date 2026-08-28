@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: entsoe
+    description: "Raw ENTSO-E energy price data loaded into DuckDB."
+
+    schema: raw
+
+    tables:
+      - name: raw_entsoe_prices
+        description: "15-minute day-ahead electricity prices from ENTSO-E."
+
+        columns:
+          - name: timestamp
+            description: "Timestamp of the price observation."
+
+          - name: price_eur_mwh
+            description: "Electricity price in EUR per MWh."

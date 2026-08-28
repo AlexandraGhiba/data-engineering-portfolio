@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: dim_customer
+    description: "Customer dimension containing one row per customer."
+
+    columns:
+      - name: customer_key
+        description: "Warehouse-generated surrogate key for the customer."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: "Business key identifying the customer in the source system."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_name
+        description: "Customer name."
+        data_tests:
+          - not_null

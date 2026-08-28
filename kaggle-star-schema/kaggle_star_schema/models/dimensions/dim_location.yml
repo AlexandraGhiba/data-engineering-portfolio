@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: dim_location
+    description: "Location dimension containing one row per unique geographic location."
+
+    columns:
+      - name: location_key
+        description: "Warehouse-generated surrogate key for the location."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: country
+        description: "Country of the location."
+        data_tests:
+          - not_null
+
+      - name: city
+        description: "City of the location."
+        data_tests:
+          - not_null
+
+      - name: state
+        description: "State or province of the location."
+        data_tests:
+          - not_null
+
+      - name: postal_code
+        description: "Postal code of the location."
+        data_tests:
+          - not_null
+
+      - name: region
+        description: "Sales region of the location."
+        data_tests:
+          - not_null

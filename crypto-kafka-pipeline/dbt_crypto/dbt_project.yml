@@ -1,0 +1,14 @@
+﻿name: crypto_dbt
+version: "1.0.0"
+
+profile: crypto_dbt
+
+model-paths:
+  - models
+
+models:
+  crypto_dbt:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

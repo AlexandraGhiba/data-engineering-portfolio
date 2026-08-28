@@ -1,0 +1,7 @@
+﻿crypto_dbt:
+  outputs:
+    dev:
+      type: duckdb
+      path: E:/my-portfolio/crypto-kafka-pipeline/data/crypto.duckdb
+      threads: 1
+  target: dev

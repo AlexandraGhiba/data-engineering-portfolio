@@ -1,0 +1,8 @@
+dbt_weather:
+  outputs:
+    dev:
+      type: duckdb
+      path: "weather_pipeline.duckdb"
+      threads: 1
+
+  target: dev

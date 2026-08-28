@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: "Date dimension containing one row per calendar date."
+
+    columns:
+      - name: date_key
+        description: "Surrogate key in YYYYMMDD format."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: date_day
+        description: "Calendar date."
+        data_tests:
+          - not_null

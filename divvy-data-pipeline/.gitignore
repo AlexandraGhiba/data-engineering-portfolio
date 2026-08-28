@@ -1,0 +1,9 @@
+﻿raw/
+warehouse.duckdb
+target/
+logs/
+__pycache__/
+*.pyc
+.env
+.venv/
+raw/

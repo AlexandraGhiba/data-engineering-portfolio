@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: stg_weather
+    description: "Cleaned and standardized hourly weather data"
+
+    columns:
+      - name: city
+        description: "City where the weather observation was recorded"
+        data_tests:
+          - not_null
+
+      - name: timestamp
+        description: "Timestamp of the weather observation"
+        data_tests:
+          - not_null
+
+      - name: temperature
+        description: "Temperature in degrees Celsius"
+        data_tests:
+          - not_null
+
+  - name: weather_daily
+    description: "Daily weather summary by city"
+
+    columns:
+      - name: city
+        description: "City"
+        data_tests:
+          - not_null
+
+      - name: weather_date
+        description: "Weather date"
+        data_tests:
+          - not_null
+
+      - name: min_temperature
+        description: "Minimum temperature of the day"
+        data_tests:
+          - not_null
+
+      - name: max_temperature
+        description: "Maximum temperature of the day"
+        data_tests:
+          - not_null
+
+      - name: avg_temperature
+        description: "Average temperature of the day"
+        data_tests:
+          - not_null

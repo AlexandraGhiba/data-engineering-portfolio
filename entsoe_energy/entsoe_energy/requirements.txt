@@ -1,0 +1,5 @@
+dlt==1.30.0
+duckdb==1.5.5
+python-dotenv==1.2.2
+dbt-duckdb==1.11.0
+requests==2.32.5

@@ -1,0 +1,9 @@
+﻿_Store
+Thumbs.db
+service_account.json
+
+data/
+dbt_crypto/logs/
+dbt_crypto/target/
+
+__pycache__/

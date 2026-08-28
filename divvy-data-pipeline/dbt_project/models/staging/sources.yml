@@ -1,0 +1,40 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw Divvy trip data loaded from partitioned Parquet files into DuckDB."
+
+    schema: main
+
+    tables:
+      - name: trips
+        identifier: raw_trips
+        description: "Raw monthly Divvy bike trip data before dbt transformations."
+
+        columns:
+          - name: ride_id
+            description: "Unique identifier for each ride."
+
+          - name: rideable_type
+            description: "Type of bike used for the ride."
+
+          - name: started_at
+            description: "Raw ride start timestamp."
+
+          - name: ended_at
+            description: "Raw ride end timestamp."
+
+          - name: start_station_id
+            description: "Raw identifier of the starting station."
+
+          - name: end_station_id
+            description: "Raw identifier of the ending station."
+
+          - name: member_casual
+            description: "Rider category: member or casual."
+
+          - name: year
+            description: "Partition year derived from the Parquet directory."
+
+          - name: month
+            description: "Partition month derived from the Parquet directory."

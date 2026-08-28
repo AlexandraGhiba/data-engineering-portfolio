@@ -1,0 +1,23 @@
+﻿version: 2
+
+sources:
+  - name: crypto
+    schema: main
+    tables:
+      - name: raw_crypto_trades
+        columns:
+          - name: timestamp
+            tests:
+              - not_null
+          - name: symbol
+            tests:
+              - not_null
+          - name: price
+            tests:
+              - not_null
+          - name: quantity
+            tests:
+              - not_null
+          - name: trade_id
+            tests:
+              - not_null

@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: dim_stations
+    description: "SCD Type 2 station dimension with historical station versions."
+
+    columns:
+      - name: station_version_key
+        description: "Surrogate key identifying one historical station version."
+        tests:
+          - not_null
+          - unique
+
+      - name: station_id
+        description: "Business identifier of the Divvy station."
+
+      - name: valid_from
+        description: "Business-effective start date for this station version."
+        tests:
+          - not_null
+
+  - name: fct_trips
+    description: "One row per valid Divvy ride."
+
+    columns:
+      - name: ride_id
+        description: "Unique identifier for each ride."
+        tests:
+          - not_null
+          - unique
+
+      - name: start_station_version_key
+        description: "Historical version of the start station valid at ride start time."
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_stations')
+                field: station_version_key
+
+      - name: end_station_version_key
+        description: "Historical version of the end station valid at ride end time."
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_stations')
+                field: station_version_key

@@ -1,0 +1,4 @@
+dlt[duckdb]
+duckdb
+dbt-core
+dbt-duckdb

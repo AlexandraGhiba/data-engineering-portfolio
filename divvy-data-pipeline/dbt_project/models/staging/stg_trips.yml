@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: stg_trips
+    description: "Cleaned and standardized Divvy trip data from the raw source."
+
+    columns:
+      - name: ride_id
+        description: "Unique identifier for each Divvy ride."
+        tests:
+          - not_null
+          - unique
+
+      - name: rideable_type
+        description: "Type of bicycle used."
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - classic_bike
+                  - electric_bike
+                  - docked_bike
+
+      - name: member_casual
+        description: "Rider membership type."
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - member
+                  - casual
+
+      - name: start_station_id
+        description: "Identifier of the starting station. Some valid rides may not have one."
+        tests:
+          - not_null:
+              config:
+                severity: warn
