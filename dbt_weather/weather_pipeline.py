@@ -1,12 +1,10 @@
-import json
 import shutil
 import subprocess
 from pathlib import Path
-from urllib.parse import urlencode
-from urllib.request import urlopen
 
 import dlt
 import duckdb
+import requests
 
 
 # ============================================================
@@ -54,10 +52,15 @@ def fetch_weather(city, latitude, longitude):
         "timezone": "Europe/Bucharest",
     }
 
-    url = f"{API_URL}?{urlencode(params)}"
+    response = requests.get(
+        API_URL,
+        params=params,
+        timeout=30,
+    )
 
-    with urlopen(url, timeout=30) as response:
-        data = json.load(response)
+    response.raise_for_status()
+
+    data = response.json()
 
     hourly = data["hourly"]
 
@@ -136,9 +139,11 @@ def validate():
     print(f"Critical NULLs: {null_count}")
 
     assert total_rows > 0, "No data found in DuckDB."
+
     assert city_count == len(CITIES), (
         f"Expected {len(CITIES)} cities, found {city_count}."
     )
+
     assert null_count == 0, (
         f"Found {null_count} records with critical NULL values."
     )
@@ -152,6 +157,7 @@ def validate():
 
 def run_dbt():
     """Run dbt build using dbt from the active environment."""
+
     dbt_executable = shutil.which("dbt")
 
     if dbt_executable is None:
@@ -175,21 +181,67 @@ def run_dbt():
 
 
 # ============================================================
-# 5. MAIN PIPELINE
+# 5. SHOW RESULTS
+# ============================================================
+
+def show_results():
+    """Display final daily weather mart."""
+
+    with duckdb.connect(str(DB_PATH)) as conn:
+
+        rows = conn.execute(
+            """
+            SELECT
+                city,
+                weather_date,
+                min_temperature,
+                max_temperature,
+                avg_temperature
+            FROM main.weather_daily
+            ORDER BY city, weather_date
+            LIMIT 20
+            """
+        ).fetchall()
+
+    print("\nFinal weather_daily results:")
+
+    print(
+        f"{'City':<15} "
+        f"{'Date':<12} "
+        f"{'Min Temp':>10} "
+        f"{'Max Temp':>10} "
+        f"{'Avg Temp':>10}"
+    )
+
+    for city, weather_date, min_temp, max_temp, avg_temp in rows:
+        print(
+            f"{city:<15} "
+            f"{str(weather_date):<12} "
+            f"{min_temp:>10.1f} "
+            f"{max_temp:>10.1f} "
+            f"{avg_temp:>10.1f}"
+        )
+
+
+# ============================================================
+# 6. MAIN PIPELINE
 # ============================================================
 
 def main():
 
     print("Starting weather pipeline...")
 
-    # API → dlt → DuckDB
+    # API -> Python -> dlt -> DuckDB
     load_data()
 
     # Validate raw data
     validate()
 
-    # Transform + test
+    # Transform + test with dbt
     run_dbt()
+
+    # Show final mart
+    show_results()
 
     print("Pipeline completed successfully!")
 

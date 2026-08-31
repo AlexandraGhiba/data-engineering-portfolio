@@ -31,3 +31,5 @@ LEFT JOIN {{ ref('dim_location') }} l
 LEFT JOIN {{ ref('dim_product') }} p
     ON o.product_id = p.product_id
     AND o.product_name = p.product_name
+    AND o.category = p.category
+    AND o.sub_category = p.sub_category

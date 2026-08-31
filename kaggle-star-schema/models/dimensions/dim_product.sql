@@ -1,5 +1,6 @@
--- Dimension table containing one row per unique product.
--- The grain is one row per product_id.
+-- Dimension table containing one row per unique product variant.
+-- Grain: one row per unique combination of
+-- product_id, product_name, category, and sub_category.
 
 with products as (
 
@@ -16,7 +17,11 @@ final as (
 
     select
         row_number() over (
-            order by product_id
+            order by
+                product_id,
+                product_name,
+                category,
+                sub_category
         ) as product_key,
         product_id,
         product_name,
