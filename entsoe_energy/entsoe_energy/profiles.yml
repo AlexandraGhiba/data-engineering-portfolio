@@ -2,7 +2,7 @@ entsoe_energy:
   outputs:
     dev:
       type: duckdb
-      path: "E:/my-portfolio/entsoe_energy/entsoe_energy/data/energy.duckdb"
+      path: "data/energy.duckdb"
       threads: 1
 
   target: dev
