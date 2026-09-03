@@ -1,11 +1,14 @@
 import os
 import requests
 import xml.etree.ElementTree as ET
+import logging
+import time
 
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -44,20 +47,112 @@ def get_day_ahead_prices(period_start, period_end):
         "periodEnd": period_end,
     }
 
-    response = requests.get(
-        BASE_URL,
-        params=params,
-        timeout=30,
+    max_attempts = 5
+    retryable_statuses = {
+        429,
+        500,
+        502,
+        503,
+        504,
+    }
+
+    for attempt in range(1, max_attempts + 1):
+        request_start = time.perf_counter()
+
+        try:
+            response = requests.get(
+                BASE_URL,
+                params=params,
+                timeout=30,
+            )
+
+        except requests.RequestException:
+            duration = time.perf_counter() - request_start
+
+            logger.warning(
+                "entsoe_request_failed "
+                "attempt=%s/%s "
+                "duration_seconds=%.2f",
+                attempt,
+                max_attempts,
+                duration,
+            )
+
+            if attempt == max_attempts:
+                raise RuntimeError(
+                    "ENTSO-E API request failed after "
+                    f"{max_attempts} attempts."
+                ) from None
+
+            wait_seconds = 2 ** attempt
+
+            logger.info(
+                "entsoe_retry "
+                "wait_seconds=%s",
+                wait_seconds,
+            )
+
+            time.sleep(wait_seconds)
+            continue
+
+        duration = time.perf_counter() - request_start
+
+        logger.info(
+            "entsoe_response "
+            "attempt=%s/%s "
+            "status=%s "
+            "duration_seconds=%.2f",
+            attempt,
+            max_attempts,
+            response.status_code,
+            duration,
+        )
+
+        if response.status_code == 200:
+            logger.info(
+                "entsoe_request_success "
+                "response_chars=%s",
+                len(response.text),
+            )
+
+            return response.text
+
+        if response.status_code in retryable_statuses:
+            if attempt < max_attempts:
+                retry_after = response.headers.get(
+                    "Retry-After"
+                )
+
+                if retry_after and retry_after.isdigit():
+                    wait_seconds = int(retry_after)
+                else:
+                    wait_seconds = 2 ** attempt
+
+                logger.warning(
+                    "entsoe_temporary_error "
+                    "status=%s "
+                    "retry_in_seconds=%s",
+                    response.status_code,
+                    wait_seconds,
+                )
+
+                time.sleep(wait_seconds)
+                continue
+
+            raise RuntimeError(
+                "ENTSO-E API temporarily unavailable "
+                f"after {max_attempts} attempts "
+                f"(HTTP {response.status_code})."
+            )
+
+        raise RuntimeError(
+            "ENTSO-E API request failed "
+            f"with HTTP {response.status_code}."
+        )
+
+    raise RuntimeError(
+        "ENTSO-E API request failed unexpectedly."
     )
-
-    print(f"HTTP status: {response.status_code}")
-
-    response.raise_for_status()
-
-    print("ENTSO-E API request successful.")
-    print(f"Response size: {len(response.text):,} characters")
-
-    return response.text
 
 
 def get_local_day_period(target_date):
