@@ -2,6 +2,6 @@
   outputs:
     dev:
       type: duckdb
-      path: E:/my-portfolio/crypto-kafka-pipeline/data/crypto.duckdb
+      path: "E:/data-engineering-portfolio/crypto-kafka-pipeline/data/crypto.duckdb"
       threads: 1
   target: dev

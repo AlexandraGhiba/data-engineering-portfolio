@@ -9,5 +9,9 @@ SELECT
     MIN(price) AS min_price,
     SUM(quantity) AS volume,
     SUM(price * quantity) AS traded_value
+
 FROM {{ ref('stg_crypto_trades') }}
+
 GROUP BY 1, 2
+
+ORDER BY minute_bucket ASC

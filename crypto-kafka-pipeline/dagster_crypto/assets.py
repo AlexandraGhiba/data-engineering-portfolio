@@ -12,6 +12,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "data" / "crypto.duckdb"
 DBT_PROJECT = PROJECT_ROOT / "dbt_crypto"
 
+VENV_DBT = PROJECT_ROOT / ".venv" / "Scripts" / "dbt.exe"
+
 
 @asset
 def crypto_dbt_models() -> MaterializeResult:
@@ -19,9 +21,11 @@ def crypto_dbt_models() -> MaterializeResult:
 
     result = subprocess.run(
         [
-            "dbt",
+            str(VENV_DBT),
             "run",
             "--project-dir",
+            str(DBT_PROJECT),
+            "--profiles-dir",
             str(DBT_PROJECT),
         ],
         cwd=PROJECT_ROOT,
@@ -55,15 +59,18 @@ def crypto_dbt_models() -> MaterializeResult:
         }
     )
 
+
 @asset(deps=[crypto_dbt_models])
 def crypto_dbt_tests() -> MaterializeResult:
     """Run dbt data-quality tests."""
 
     result = subprocess.run(
         [
-            "dbt",
+            str(VENV_DBT),
             "test",
             "--project-dir",
+            str(DBT_PROJECT),
+            "--profiles-dir",
             str(DBT_PROJECT),
         ],
         cwd=PROJECT_ROOT,
@@ -82,6 +89,7 @@ def crypto_dbt_tests() -> MaterializeResult:
             "tests": 7,
         }
     )
+
 
 @asset(deps=[crypto_dbt_tests])
 def crypto_anomaly_check() -> MaterializeResult:
@@ -152,7 +160,8 @@ def crypto_anomaly_check() -> MaterializeResult:
             """,
             [
                 latest_window,
-                latest_window + __import__("datetime").timedelta(minutes=10),
+                latest_window
+                + __import__("datetime").timedelta(minutes=10),
             ],
         ).fetchone()[0]
 
@@ -211,10 +220,16 @@ def crypto_anomaly_check() -> MaterializeResult:
         }
     )
 
+
 # ============ CONFIG Google Sheets ============
-SERVICE_ACCOUNT_FILE = str(PROJECT_ROOT / "service_account.json")
+SERVICE_ACCOUNT_FILE = str(
+    PROJECT_ROOT / "service_account.json"
+)
+
 SPREADSHEET_ID = "1I4gAYeLyaVwmONhM7h373MGxzNYYt3ifL-UpgFjH4_8"
+
 WORKSHEET_NAME = "LiveData"
+
 SHEETS_SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -227,20 +242,25 @@ def crypto_metrics_to_sheets() -> MaterializeResult:
     """Uploads mart_crypto_metrics into Google Sheets after the full pipeline runs."""
 
     with duckdb.connect(str(DB_PATH), read_only=True) as conn:
-        df = conn.execute("SELECT * FROM mart_crypto_metrics").fetchdf()
+        df = conn.execute(
+            "SELECT * FROM mart_crypto_metrics"
+        ).fetchdf()
 
     for col in df.columns:
         if df[col].dtype.name.startswith("datetime"):
             df[col] = df[col].astype(str)
 
     creds = Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SHEETS_SCOPES
+        SERVICE_ACCOUNT_FILE,
+        scopes=SHEETS_SCOPES,
     )
+
     client = gspread.authorize(creds)
     sheet = client.open_by_key(SPREADSHEET_ID)
 
     try:
         worksheet = sheet.worksheet(WORKSHEET_NAME)
+
     except gspread.exceptions.WorksheetNotFound:
         worksheet = sheet.add_worksheet(
             title=WORKSHEET_NAME,
@@ -251,7 +271,11 @@ def crypto_metrics_to_sheets() -> MaterializeResult:
     worksheet.clear()
 
     values = [df.columns.tolist()] + df.values.tolist()
-    worksheet.update(values, value_input_option="USER_ENTERED")
+
+    worksheet.update(
+        values,
+        value_input_option="USER_ENTERED",
+    )
 
     return MaterializeResult(
         metadata={
