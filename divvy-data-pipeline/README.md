@@ -67,6 +67,8 @@ After validation and filtering, `fct_trips` contains **669,493 valid trips**.
 
 ## Airflow DAG
 
+The complete pipeline is orchestrated through seven sequential Airflow tasks:
+
 ```text
 ingest_month
       ↓
@@ -83,7 +85,9 @@ build_fact_and_marts
 run_dbt_tests
 ```
 
-Airflow orchestrates the complete workflow and ensures each stage runs only after its upstream dependencies succeed.
+### Successful Pipeline Run
+
+![Airflow DAG](docs/screenshots/airflow_dag.png)
 
 ## SCD Type 2 Station History
 
@@ -98,7 +102,7 @@ start_station_version_key
 end_station_version_key
 ```
 
-This links each trip to the station version that was valid when the trip occurred.
+Each trip is therefore linked to the station version that was valid when the trip occurred.
 
 ## Analytical Marts
 
@@ -115,7 +119,7 @@ This links each trip to the station version that was valid when the trip occurre
 | Mar | Casual | 82,500 | 24.97 min | 27.4% |
 | Mar | Member | 219,081 | 11.97 min | 72.6% |
 
-Casual rider share increased from **16.9% to 27.4%**, while casual riders consistently had longer average trip durations.
+Casual rider share increased from **16.9% to 27.4%**, while casual riders consistently recorded longer average trip durations.
 
 ### Station Changes
 
@@ -169,6 +173,9 @@ divvy-data-pipeline/
 │   ├── models/
 │   ├── snapshots/
 │   └── tests/
+├── docs/
+│   └── screenshots/
+│       └── airflow_dag.png
 ├── scripts/
 ├── inspect_results.py
 ├── docker-compose.yml
@@ -178,19 +185,19 @@ divvy-data-pipeline/
 
 ## How to Run
 
-Start the environment:
+Start the Docker environment:
 
 ```bash
 docker compose up -d
 ```
 
-Open Airflow at:
+Open Airflow:
 
 ```text
 http://localhost:8080
 ```
 
-Trigger:
+Trigger the DAG:
 
 ```text
 divvy_monthly_pipeline
