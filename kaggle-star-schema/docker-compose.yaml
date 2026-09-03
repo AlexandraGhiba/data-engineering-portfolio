@@ -1,0 +1,23 @@
+services:
+  airflow:
+    build: .
+    container_name: kaggle-sales-airflow
+
+    command: standalone
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./:/opt/airflow/kaggle-star-schema
+      - airflow_logs:/opt/airflow/logs
+
+    working_dir: /opt/airflow/kaggle-star-schema
+
+volumes:
+  airflow_logs:

@@ -77,20 +77,37 @@ Daily Price Report
 
 ## 3. 🛒 Kaggle Retail Star Schema
 
-An analytics engineering project that transforms a retail dataset into a dimensional **Star Schema** using dbt and DuckDB.
+An end-to-end analytics engineering project that transforms a retail dataset into a dimensional **Star Schema** using Python, DuckDB, dbt, Apache Airflow, and Docker.
 
 ```text
 Excel Dataset
       ↓
 Python Raw Loader
       ↓
-DuckDB
+DuckDB Raw Tables
       ↓
 dbt Staging
       ↓
 Dimensions + Fact
       ↓
 dbt Tests
+      ↓
+Warehouse Validation
+
+Orchestrated with Apache Airflow
+running in Docker
+```
+
+### Airflow DAG
+
+```text
+load_raw_data
+      ↓
+dbt_run
+      ↓
+dbt_test
+      ↓
+validate_warehouse
 ```
 
 ### Data Model
@@ -103,17 +120,19 @@ dim_date ─── fact_orders ─── dim_product
              dim_location
 ```
 
+**Fact grain:** one row per source order line.
+
 **Results:**
 
 - **9,994** fact rows
 - **5,009** distinct orders
 - **1,894** products
 - **793** customers
-- **21 / 21 dbt tests passing**
+- **32 / 32 dbt tests passing**
 
-**Key concepts:** Star Schema · dimensional modeling · surrogate keys · fact/dimension design · reproducible pipelines
+**Key concepts:** Star Schema · dimensional modeling · surrogate keys · fact/dimension design · Apache Airflow orchestration · Docker · automated data quality · warehouse validation
 
-**Stack:** `Python` `dbt` `DuckDB` `SQL` `pandas`
+**Stack:** `Python` `Apache Airflow` `Docker` `dbt` `DuckDB` `SQL` `pandas`
 
 📁 [`kaggle-star-schema/`](./kaggle-star-schema/)
 
@@ -259,7 +278,7 @@ cd data-engineering-portfolio
 
 The projects are intentionally independent. Open the README inside the project you want to explore for project-specific setup and execution instructions.
 
-> **Note:** The Divvy and Crypto Kafka projects use Docker-based infrastructure. The remaining projects can be run independently without starting Kafka or Airflow.
+> **Note:** The Divvy, Crypto Kafka, and Kaggle Star Schema projects use Docker-based infrastructure. The Kaggle and Divvy projects use Apache Airflow for orchestration, while the Crypto Kafka project uses Dagster for analytical workflow orchestration.
 
 ---
 

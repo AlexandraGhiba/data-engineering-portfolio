@@ -1,19 +1,15 @@
-# Kaggle Star Schema – dbt & DuckDB
+# Kaggle Sales Star Schema – dbt, DuckDB & Airflow
 
-End-to-end analytics engineering project that transforms a retail sales dataset into a dimensional **Star Schema** using **dbt, DuckDB, SQL, and Python**.
+End-to-end analytics engineering project that transforms a retail sales dataset into a dimensional **Star Schema** using **Python, DuckDB, dbt, SQL, Docker, and Apache Airflow**.
 
-The entire warehouse can be rebuilt from the source Excel file with one command:
-
-```bash
-python run_pipeline.py
-```
+The pipeline is orchestrated with **Apache Airflow**, which manages ingestion, dbt transformations, data quality testing, and warehouse validation.
 
 ## Architecture
 
 ```text
 Excel Dataset
       ↓
-Python Loader
+Python Ingestion
       ↓
 DuckDB Raw Tables
       ↓
@@ -21,10 +17,68 @@ dbt Staging
       ↓
 Star Schema
       ↓
-Data Quality Tests
+dbt Data Quality Tests
       ↓
-dbt Documentation
+Warehouse Validation
+
+      Orchestrated by
+      Apache Airflow
+      running in Docker
 ```
+
+## Airflow Pipeline
+
+The workflow is implemented as an Airflow DAG:
+
+`kaggle_sales_pipeline`
+
+```text
+load_raw_data
+      ↓
+   dbt_run
+      ↓
+   dbt_test
+      ↓
+validate_warehouse
+```
+
+### Tasks
+
+**`load_raw_data`**
+
+Runs the Python ingestion script:
+
+```bash
+python scripts/load_raw_data.py
+```
+
+This loads the source Excel dataset into DuckDB raw tables.
+
+**`dbt_run`**
+
+Runs the dbt transformation layer:
+
+```bash
+dbt run --profiles-dir .
+```
+
+This builds the staging models, dimensions, and central fact table.
+
+**`dbt_test`**
+
+Runs the dbt data quality suite:
+
+```bash
+dbt test --profiles-dir .
+```
+
+The pipeline continues only if the dbt tests pass.
+
+**`validate_warehouse`**
+
+Performs a final validation against DuckDB and confirms that the `fact_orders` table exists and contains data.
+
+Airflow manages task dependencies and prevents downstream tasks from running when an upstream task fails.
 
 ## Star Schema
 
@@ -61,17 +115,19 @@ WARN=0
 ERROR=0
 ```
 
+The Airflow pipeline runs these tests automatically after the dbt models are built.
+
 ## dbt Lineage
 
-dbt manages the transformation dependencies using `source()` and `ref()`:
+dbt manages transformation dependencies using `source()` and `ref()`:
 
 ```text
 raw_orders ──→ stg_orders ──→ dimensions ──→ fact_orders
-                                    ↑
+                                  ↑
 raw_calendar → stg_calendar → dim_date
 ```
 
-Interactive model lineage and documentation can be generated locally:
+Interactive model lineage and documentation can also be generated locally:
 
 ```bash
 dbt docs generate
@@ -83,9 +139,13 @@ Then open `http://127.0.0.1:8001`.
 ## Project Structure
 
 ```text
-kaggle_star_schema/
+kaggle-star-schema/
+│
+├── dags/
+│   └── kaggle_sales_dag.py
 │
 ├── data/
+│
 ├── scripts/
 │   └── load_raw_data.py
 │
@@ -97,6 +157,8 @@ kaggle_star_schema/
 ├── tests/
 │   └── assert_dim_product_grain.sql
 │
+├── Dockerfile
+├── docker-compose.yaml
 ├── run_pipeline.py
 ├── dbt_project.yml
 ├── profiles.yml
@@ -104,20 +166,64 @@ kaggle_star_schema/
 └── README.md
 ```
 
-## Run the Project
+## Run with Airflow
+
+### 1. Clone the repository
 
 ```bash
 git clone <repository-url>
-cd kaggle-star-schema/kaggle_star_schema
+cd kaggle-star-schema
+```
 
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+### 2. Start Airflow with Docker
 
-pip install -r requirements.txt
+```bash
+docker compose up --build
+```
+
+### 3. Open the Airflow UI
+
+Open:
+
+```text
+http://localhost:8080
+```
+
+### 4. Run the pipeline
+
+In the Airflow UI:
+
+```text
+DAGs
+  ↓
+kaggle_sales_pipeline
+  ↓
+Trigger
+  ↓
+Single Run
+```
+
+A successful DAG run executes:
+
+```text
+load_raw_data       SUCCESS
+      ↓
+dbt_run             SUCCESS
+      ↓
+dbt_test            SUCCESS
+      ↓
+validate_warehouse  SUCCESS
+```
+
+## Alternative Local Run
+
+The project can also be executed without Airflow using the original Python pipeline runner:
+
+```bash
 python run_pipeline.py
 ```
 
-A successful run builds the complete DuckDB warehouse, executes all dbt models and tests, and generates the documentation.
+This provides a lightweight way to rebuild and validate the warehouse directly from the command line.
 
 ## Results
 
@@ -132,14 +238,20 @@ A successful run builds the complete DuckDB warehouse, executes all dbt models a
 
 ## Tech Stack
 
-**Python** · **SQL** · **dbt** · **DuckDB** · **pandas** · **openpyxl**
+**Python** · **SQL** · **dbt** · **DuckDB** · **Apache Airflow** · **Docker** · **pandas** · **openpyxl**
 
 ## What This Project Demonstrates
 
+- End-to-end analytics engineering workflow
+- Workflow orchestration with Apache Airflow
+- Containerized development with Docker
+- Python-based data ingestion
 - Dimensional modeling and Star Schema design
-- Fact and dimension tables
+- Fact and dimension table design
+- Fact table grain definition
 - Surrogate keys and referential integrity
 - dbt staging and model dependencies
 - Automated data quality testing
+- Warehouse validation
 - dbt documentation and lineage
-- Reproducible Python pipeline orchestration
+- Reproducible local data pipelines
