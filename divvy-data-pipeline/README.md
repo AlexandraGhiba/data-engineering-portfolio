@@ -1,36 +1,36 @@
 # 🚲 Divvy Bike-Share Data Pipeline
 
-An end-to-end batch data engineering pipeline that processes Divvy bike-share trip data using **Apache Airflow, Python, Parquet, DuckDB and dbt**.
+End-to-end batch data engineering pipeline for historical Divvy bike-share data using **Apache Airflow, Python, Parquet, DuckDB, dbt, and Docker**.
 
-The project demonstrates monthly ingestion, incremental processing, SCD Type 2 station history, temporal foreign keys, data quality testing and analytical reporting.
+The project demonstrates monthly ingestion, incremental processing, dimensional modeling, **SCD Type 2 station history**, temporal foreign keys, and automated data quality testing.
 
 ## Architecture
 
 ```text
-Divvy ZIP / CSV
-      ↓
-Apache Airflow
-      ↓
+Divvy CSV
+    ↓
+Airflow
+    ↓
 Python ingestion
-      ↓
+    ↓
 Partitioned Parquet
-      ↓
+    ↓
 DuckDB
-      ↓
-dbt staging + intermediate
-      ↓
-SCD Type 2 station history
-      ↓
+    ↓
+dbt transformations
+    ↓
+SCD Type 2
+    ↓
 dim_stations + fct_trips
-      ↓
+    ↓
 Analytical marts
-      ↓
+    ↓
 dbt tests
 ```
 
-## Stack
+## Tech Stack
 
-| Layer | Tool |
+| Layer | Technology |
 |---|---|
 | Ingestion | Python |
 | Orchestration | Apache Airflow |
@@ -42,101 +42,30 @@ dbt tests
 
 ## Dataset
 
-The pipeline processes historical Divvy bike-share trips.
-
-Current dataset:
+The pipeline processes Divvy bike-share trips from **January–March 2024**.
 
 | Month | Raw Trips |
 |---|---:|
-| January 2024 | 144,873 |
-| February 2024 | 223,164 |
-| March 2024 | 301,687 |
+| January | 144,873 |
+| February | 223,164 |
+| March | 301,687 |
 | **Total** | **669,724** |
 
-After validation and duration filtering, `fct_trips` contains **669,493 trips with 669,493 distinct `ride_id` values**.
+After validation and filtering, `fct_trips` contains **669,493 valid trips**.
 
 ## Key Engineering Features
 
-- Monthly parameterized ingestion with Airflow
-- Parquet storage partitioned by year/month
+- Monthly Airflow-orchestrated ingestion
+- Year/month partitioned Parquet storage
 - DuckDB analytical warehouse
-- dbt staging, intermediate and mart layers
+- dbt staging, intermediate, dimension, fact, and mart layers
 - Incremental `fct_trips` keyed by `ride_id`
 - SCD Type 2 station history
-- Time-aware station foreign keys
+- Temporal station foreign keys
 - Automated dbt data quality tests
 - Idempotent monthly processing
 
-## Station History — SCD Type 2
-
-Station names and locations can change over time. In some cases, the same station ID appears at significantly different locations.
-
-The project preserves historical station versions using **SCD Type 2** rather than assigning every historical trip to the latest station record.
-
-```text
-station_id
-    ↓
-monthly station observations
-    ↓
-dbt snapshot
-    ↓
-dim_stations
-    ↓
-historical station versions
-```
-
-`fct_trips` uses temporal foreign keys so each trip is linked to the station version that was valid when the trip occurred.
-
-## Analytical Marts
-
-### Station Imbalance
-
-`mart_station_imbalance` identifies stations with the largest average weekday difference between departures and arrivals, separated by **member vs casual** riders.
-
-Example:
-
-```text
-Streeter Dr & Grand Ave
-
-Casual:  -4.90 net trips / weekday
-Member:  +4.52 net trips / weekday
-```
-
-### Monthly Usage
-
-`mart_monthly_usage` tracks trip volume, average duration and rider-type share.
-
-Casual rider share increased across the available history:
-
-```text
-January:   16.9%
-February:  21.1%
-March:     27.4%
-```
-
-Casual riders also consistently recorded longer average trip durations than members.
-
-### Station Identity Changes
-
-`mart_station_changes` detects renamed, relocated and potential re-issued station IDs.
-
-Example:
-
-```text
-station_id: 517
-
-Public Rack - Pulaski Rd & Armitage Ave
-                ↓
-Clark St & Jarvis Ave
-
-Movement: ~11.8 km
-```
-
-Without SCD Type 2 history, trips belonging to these different station versions could be incorrectly combined under the same station identity.
-
 ## Airflow DAG
-
-The monthly workflow contains seven stages:
 
 ```text
 ingest_month
@@ -154,9 +83,64 @@ build_fact_and_marts
 run_dbt_tests
 ```
 
+Airflow orchestrates the complete workflow and ensures each stage runs only after its upstream dependencies succeed.
+
+## SCD Type 2 Station History
+
+Station metadata can change over time through renames, relocations, or station ID reuse.
+
+The pipeline uses a **dbt snapshot and SCD Type 2 dimension** to preserve historical station versions instead of overwriting previous values.
+
+`fct_trips` uses temporal foreign keys:
+
+```text
+start_station_version_key
+end_station_version_key
+```
+
+This links each trip to the station version that was valid when the trip occurred.
+
+## Analytical Marts
+
+### Monthly Usage
+
+`mart_monthly_usage` tracks trip volume, average duration, and rider-type share.
+
+| Month | Rider | Trips | Avg. Duration | Share |
+|---|---|---:|---:|---:|
+| Jan | Casual | 24,446 | 21.32 min | 16.9% |
+| Jan | Member | 120,330 | 13.80 min | 83.1% |
+| Feb | Casual | 47,157 | 25.19 min | 21.1% |
+| Feb | Member | 175,979 | 12.92 min | 78.9% |
+| Mar | Casual | 82,500 | 24.97 min | 27.4% |
+| Mar | Member | 219,081 | 11.97 min | 72.6% |
+
+Casual rider share increased from **16.9% to 27.4%**, while casual riders consistently had longer average trip durations.
+
+### Station Changes
+
+`mart_station_changes` detects station renames, relocations, and potential station ID reuse.
+
+The current dataset contains **14 detected station changes**.
+
+### Station Imbalance
+
+`mart_station_imbalance` compares weekday departures and arrivals by station and rider type, producing **4,562 analytical records**.
+
+## Final Models
+
+| Model | Rows |
+|---|---:|
+| `fct_trips` | 669,493 |
+| `dim_stations` | 2,796 |
+| `stations_snapshot` | 2,796 |
+| `mart_monthly_usage` | 6 |
+| `mart_station_changes` | 14 |
+| `mart_station_imbalance` | 4,562 |
+
 ## Data Quality
 
-The final dbt test suite produced:
+Final dbt test results:
 
 ```text
 PASS  = 12
@@ -165,15 +149,15 @@ ERROR = 0
 TOTAL = 13
 ```
 
-The warning represents source trips with a missing `start_station_id` and is intentionally configured with warning severity.
-
-Critical tests validate:
+Tests validate:
 
 - unique and non-null `ride_id`
 - accepted rider and bike types
 - positive trip duration
 - unique station versions
 - fact-to-dimension relationships
+
+The single warning represents source records with a missing `start_station_id` and is intentionally configured with warning severity.
 
 ## Project Structure
 
@@ -183,13 +167,10 @@ divvy-data-pipeline/
 │   └── ingest_dag.py
 ├── dbt_project/
 │   ├── models/
-│   │   ├── staging/
-│   │   ├── intermediate/
-│   │   └── marts/
 │   ├── snapshots/
 │   └── tests/
 ├── scripts/
-├── raw/
+├── inspect_results.py
 ├── docker-compose.yml
 ├── profiles.yml
 └── README.md
@@ -197,13 +178,13 @@ divvy-data-pipeline/
 
 ## How to Run
 
-Start the Docker environment:
+Start the environment:
 
 ```bash
 docker compose up -d
 ```
 
-Open Airflow:
+Open Airflow at:
 
 ```text
 http://localhost:8080
@@ -215,17 +196,10 @@ Trigger:
 divvy_monthly_pipeline
 ```
 
-and provide the processing `year` and `month`.
-
-Monthly data should be processed chronologically to preserve correct SCD Type 2 station history.
-
-Run dbt tests manually:
+After all seven tasks complete successfully, inspect the final DuckDB models:
 
 ```bash
-docker exec -it divvy_airflow dbt test \
-  --project-dir /opt/airflow/dbt_project \
-  --profiles-dir /opt/airflow \
-  --vars "{processing_year: 2024, processing_month: 3}"
+python inspect_results.py
 ```
 
 Stop the environment:
@@ -236,10 +210,8 @@ docker compose down
 
 ## What This Project Demonstrates
 
-**Python · SQL · Airflow · Parquet · DuckDB · dbt · Docker · Incremental Loading · SCD Type 2 · Dimensional Modeling · Data Quality Testing**
+**Python · SQL · Airflow · Parquet · DuckDB · dbt · Docker · Incremental Loading · SCD Type 2 · Temporal Joins · Dimensional Modeling · Data Quality Testing**
 
 ## Author
 
 **Ghiba Alexandra**
-
-Data Engineering portfolio focused on building reliable and reproducible data pipelines.
