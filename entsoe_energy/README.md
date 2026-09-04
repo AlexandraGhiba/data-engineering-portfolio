@@ -1,21 +1,17 @@
 # ENTSO-E Energy Price Pipeline
 
-A small end-to-end data engineering project that extracts Romanian day-ahead electricity prices from the ENTSO-E Transparency Platform, loads them into DuckDB with dlt, transforms and validates them with dbt, and generates a daily analytical report.
+An end-to-end data engineering project that extracts Romanian day-ahead electricity prices from the ENTSO-E Transparency Platform, loads them into DuckDB with dlt, transforms and validates them with dbt, and generates a daily analytical report.
 
-The project demonstrates a reproducible local workflow using **Python, dlt, DuckDB, dbt and SQL**, with timezone-aware date handling, API retry logic, structured logging and basic execution metrics.
+The project demonstrates **Python, dlt, DuckDB, dbt and SQL**, with timezone-aware date handling, resilient API extraction, idempotent loading, data quality checks and application logging.
 
 ---
 
-## Project Overview
-
-The pipeline follows this flow:
+## Architecture
 
 ```text
 ENTSO-E API
     ↓
 Python extraction + XML parsing
-    ↓
-Timezone-aware Romanian date handling
     ↓
 dlt ingestion
     ↓
@@ -28,37 +24,21 @@ dbt daily mart
 Daily price report
 ```
 
-The pipeline works with Romanian calendar dates using the `Europe/Bucharest` timezone.
+The pipeline works with Romanian calendar dates using `Europe/Bucharest`. ENTSO-E uses UTC intervals, so the requested local day is converted to the correct UTC boundaries before the API request.
 
-ENTSO-E returns timestamps in UTC, so the requested Romanian day is converted to the correct UTC interval before the API request is sent.
-
-Example:
-
-```text
-Romanian date:
-2026-08-26
-
-UTC API interval:
-202608252100 -> 202608262100
-```
-
-The market data is normally provided at 15-minute resolution:
-
-```text
-24 hours × 4 observations/hour = 96 observations
-```
+A normal 24-hour day at 15-minute resolution contains **96 observations**.
 
 ---
 
-## Technologies
+## Tech Stack
 
-- Python
-- ENTSO-E Transparency Platform API
-- dlt
-- DuckDB
-- dbt
-- SQL
-- Git / GitHub
+- **Python** — API integration, XML parsing, timezone handling and orchestration
+- **ENTSO-E Transparency Platform API** — Romanian day-ahead electricity prices
+- **dlt** — ingestion and merge loading
+- **DuckDB** — local analytical database
+- **dbt** — SQL transformations and data quality tests
+- **SQL** — staging and analytical models
+- **Git / GitHub** — version control
 
 ---
 
@@ -66,29 +46,23 @@ The market data is normally provided at 15-minute resolution:
 
 ```text
 entsoe_energy/
-│
 ├── data/
 │   └── energy.duckdb
-│
 ├── dbt_energy/
 │   ├── models/
 │   │   ├── staging/
 │   │   │   ├── sources.yml
 │   │   │   ├── stg_entsoe_prices.sql
 │   │   │   └── stg_entsoe_prices.yml
-│   │   │
 │   │   └── marts/
 │   │       └── daily_prices.sql
-│   │
 │   └── tests/
 │       ├── no_duplicate_timestamps.sql
 │       └── price_sanity_check.sql
-│
 ├── src/
 │   ├── entsoe_api.py
 │   ├── dlt_pipeline.py
 │   └── report.py
-│
 ├── run_pipeline.py
 ├── dbt_project.yml
 ├── profiles.yml
@@ -97,79 +71,39 @@ entsoe_energy/
 └── README.md
 ```
 
-Generated folders, local databases, logs and secrets are excluded from Git.
+Generated data, DuckDB files, logs, dbt build artifacts and secrets are excluded from Git.
 
 ---
 
-## Pipeline Components
+## How It Works
 
-### 1. ENTSO-E API Extraction
+### 1. Extraction and API Resilience
 
-`src/entsoe_api.py` is responsible for communication with the ENTSO-E Transparency Platform.
+`src/entsoe_api.py`:
 
-It:
-
-- loads the API token from environment variables;
+- reads the API token from the environment;
 - calculates the correct UTC interval for a Romanian calendar day;
-- requests Romanian day-ahead electricity prices;
-- parses the XML response;
-- supports both `PT15M` and `PT60M` ENTSO-E resolutions;
-- keeps only observations belonging to the requested Romanian calendar date;
-- returns timezone-aware timestamps.
+- requests Romanian day-ahead prices;
+- parses the ENTSO-E XML response;
+- supports `PT15M` and `PT60M` resolutions;
+- filters observations to the requested Romanian date.
 
-### Retry and Exponential Backoff
-
-Temporary API failures are handled explicitly.
-
-The pipeline retries these HTTP status codes:
-
-```text
-429
-500
-502
-503
-504
-```
-
-The implementation performs up to five attempts and uses exponential backoff between retries:
+Temporary failures are retried for HTTP `429`, `500`, `502`, `503` and `504`, with up to five attempts and exponential backoff:
 
 ```text
 2s → 4s → 8s → 16s
 ```
 
-If ENTSO-E returns a `Retry-After` header, the pipeline respects it.
+If ENTSO-E provides a numeric `Retry-After` header, it is respected. Requests also use a timeout.
 
-This makes the extraction step more resilient to temporary server errors and API rate limiting.
+Application logs record status, attempts and request duration using key-value messages.
 
----
+### 2. dlt Ingestion
 
-### 2. Timezone-Aware Date Handling
-
-Romania uses `Europe/Bucharest`, which is UTC+2 in winter and UTC+3 in summer.
-
-Instead of hard-coding an offset, the pipeline creates the requested local-day boundaries and converts them to UTC before querying ENTSO-E.
-
-This keeps the implementation correct when daylight-saving time changes.
-
-Parsed UTC timestamps are converted back to Romanian local time when filtering observations for the requested date.
-
----
-
-### 3. dlt Ingestion
-
-`src/dlt_pipeline.py` defines the ingestion pipeline and loads parsed records into DuckDB.
-
-The raw table is:
+`src/dlt_pipeline.py` loads the parsed records into:
 
 ```text
 raw.raw_entsoe_prices
-```
-
-Main fields:
-
-```text
-timestamp
-price_eur_mwh
 ```
 
 The dlt resource uses:
@@ -179,57 +113,13 @@ write_disposition = merge
 primary_key = timestamp
 ```
 
-This makes the load idempotent: rerunning the same date does not create duplicate timestamp records.
+This makes the load idempotent: rerunning the same date does not create duplicate timestamp records, while historical dates remain stored.
 
-Historical dates remain stored in DuckDB when newer dates are loaded.
+The ingestion layer also logs basic metrics such as `rows` and `duration_seconds`.
 
----
+### 3. dbt Transformation and Testing
 
-### 4. Structured Logging and Basic Metrics
-
-The Python ingestion layer uses the standard `logging` module instead of relying only on `print()` statements.
-
-Example log events include:
-
-```text
-entsoe_ingestion_start
-entsoe_response
-entsoe_request_success
-entsoe_temporary_error
-entsoe_ingestion_metrics
-dlt_load_complete
-```
-
-Logs contain timestamps, severity levels, component names and key-value information.
-
-The pipeline also records two basic execution metrics:
-
-```text
-rows=96
-duration_seconds=...
-```
-
-For example:
-
-```text
-entsoe_ingestion_metrics target_date=2026-09-02 rows=96 duration_seconds=0.78
-```
-
-This provides lightweight observability without introducing additional infrastructure such as Prometheus or Grafana.
-
----
-
-### 5. DuckDB
-
-DuckDB is used as the local analytical database.
-
-The database is stored in:
-
-```text
-data/energy.duckdb
-```
-
-The main data flow inside DuckDB is:
+The analytical flow is:
 
 ```text
 raw.raw_entsoe_prices
@@ -239,66 +129,41 @@ main.stg_entsoe_prices
 main.daily_prices
 ```
 
-DuckDB stores historical observations locally, so previously processed dates remain available after new pipeline runs.
+`stg_entsoe_prices` standardizes the raw observations and derives the Romanian `price_date`.
 
-The database file itself is treated as a local generated artifact and is not committed to Git.
+`daily_prices` aggregates observations by date and calculates:
 
----
+- average price;
+- minimum price;
+- maximum price;
+- observation count.
 
-### 6. dbt Transformation Layer
+### 4. Reporting and Orchestration
 
-dbt is responsible for SQL transformations, documentation and data quality checks.
+`src/report.py` reads `main.daily_prices` and prints the daily summary.
 
-The project contains:
-
-```text
-staging model:
-main.stg_entsoe_prices
-
-daily mart:
-main.daily_prices
-```
-
-#### Staging Model
-
-`dbt_energy/models/staging/stg_entsoe_prices.sql` cleans the raw ENTSO-E observations and derives the Romanian price date.
-
-Main fields include:
+`run_pipeline.py` executes:
 
 ```text
-timestamp
-price_eur_mwh
-price_date
+1. ENTSO-E ingestion
+2. dbt build
+3. Daily price report
 ```
 
-#### Daily Mart
-
-`dbt_energy/models/marts/daily_prices.sql` aggregates the 15-minute observations by date.
-
-For each day it calculates:
-
-```text
-average price
-minimum price
-maximum price
-number of observations
-```
+The workflow is fail-fast: if ingestion or `dbt build` fails, the following steps are not executed.
 
 ---
 
 ## Data Quality
 
-The project uses dbt schema tests and custom SQL tests.
+dbt schema and custom SQL tests check that:
 
-Checks include:
-
-- timestamps are not null;
-- prices are not null;
+- required fields are not null;
 - timestamps are unique;
 - duplicate timestamps are rejected;
 - electricity prices remain within the configured sanity range.
 
-A successful dbt build currently finishes with:
+A validated build completes with:
 
 ```text
 PASS=7
@@ -307,25 +172,14 @@ ERROR=0
 SKIP=0
 ```
 
-For a normal Romanian day with 15-minute resolution, the pipeline expects:
-
-```text
-96 observations
-```
-
-The ingestion layer also logs a warning when the number of parsed rows differs from 96.
+For a normal 24-hour Romanian day at 15-minute resolution, the ingestion layer expects 96 observations and logs a warning when the count differs.
 
 ---
 
-## Daily Price Report
-
-`src/report.py` reads the transformed `main.daily_prices` table and prints a daily summary.
-
-Example:
+## Example Output
 
 ```text
 DATE                 AVG PRICE      MIN PRICE      MAX PRICE   OBSERVATIONS
---------------------------------------------------------------------------------
 2026-08-18              164.28         114.80         220.16             96
 2026-08-19              167.65         123.35         224.07             96
 2026-08-20              161.42          95.00         216.22             96
@@ -334,141 +188,66 @@ DATE                 AVG PRICE      MIN PRICE      MAX PRICE   OBSERVATIONS
 2026-09-02              197.88         100.64         336.59             96
 ```
 
-The report shows all historical dates currently stored in DuckDB.
+Historical dates remain available because DuckDB persists between runs and dlt uses merge loading.
 
 ---
 
 ## Running the Pipeline
 
-From the `entsoe_energy` project directory:
+From the `entsoe_energy` directory:
 
 ```powershell
 python run_pipeline.py
 ```
 
-When no date is provided, the pipeline processes yesterday according to the `Europe/Bucharest` timezone.
+Without an argument, the pipeline processes yesterday according to `Europe/Bucharest`.
 
-A specific Romanian calendar date can also be supplied:
+For a specific Romanian calendar date:
 
 ```powershell
 python run_pipeline.py 2026-08-26
 ```
 
-The main runner executes:
-
-```text
-1. ENTSO-E ingestion
-2. dbt build
-3. Daily price report
-```
-
-A successful execution ends with:
-
-```text
-PIPELINE COMPLETED SUCCESSFULLY
-```
-
-### Running from the Portfolio Root
-
-If the repository is opened from the monorepo root:
-
-```powershell
-python entsoe_energy\run_pipeline.py
-```
-
-A specific date can be supplied in the same way:
+From the portfolio root:
 
 ```powershell
 python entsoe_energy\run_pipeline.py 2026-08-26
+```
+
+A successful run ends with:
+
+```text
+PIPELINE COMPLETED SUCCESSFULLY
 ```
 
 ---
 
 ## Security
 
-The ENTSO-E API token is stored locally in a `.env` file.
-
-Example:
+The ENTSO-E API token is stored locally in `.env`:
 
 ```text
 ENTSOE_API_TOKEN=your_api_token_here
 ```
 
-The `.env` file must never be committed to GitHub.
-
-Local/generated artifacts such as database files, logs, dbt build output and Python caches are also excluded from version control.
+Secrets and generated artifacts such as `.env`, DuckDB files, local data, logs and dbt build output are excluded from version control.
 
 ---
 
-## Reliability Features
+## Production Improvements
 
-The project includes several production-minded improvements while keeping the architecture intentionally lightweight:
+The project is intentionally lightweight and runs locally. In a production environment, the next improvements would be:
 
-- timezone-aware Romanian date handling;
-- explicit handling of HTTP `429` and retryable `5xx` errors;
-- exponential retry backoff;
-- support for the `Retry-After` response header;
-- request and ingestion duration logging;
-- row-count logging;
-- warning on unexpected daily observation counts;
-- idempotent dlt merge loading;
-- dbt data quality tests.
+- a scheduler/orchestrator such as Airflow, Dagster or Prefect for automated runs and backfills;
+- CI/CD to run tests and `dbt build` automatically;
+- unit tests for XML parsing and API edge cases;
+- dedicated tests for daylight-saving-time transition days;
+- centralized metrics and monitoring for freshness, latency and failures;
+- alerting when data is missing, dbt tests fail or the API remains unavailable;
+- a cloud warehouse or server database if data volume or the number of consumers grows.
 
 ---
 
-## Project Goal
+## Key Engineering Concepts
 
-The goal of the project is to demonstrate a compact but complete data engineering workflow:
-
-```text
-Extract → Parse → Ingest → Store → Transform → Validate → Report
-```
-
-The project combines Python, dlt, DuckDB, dbt and SQL into a reproducible local pipeline for Romanian electricity market data.
-
-It intentionally avoids unnecessary infrastructure while still demonstrating practical concerns such as API reliability, idempotency, data quality, observability and timezone correctness.
-
----
-
-## What I Learned
-
-This project helped me practice:
-
-- working with a real external API;
-- parsing XML data;
-- handling UTC and Romanian local time correctly;
-- accounting for daylight-saving time;
-- implementing retry logic with exponential backoff;
-- handling rate limiting and temporary API failures;
-- using structured application logging;
-- recording simple execution metrics;
-- loading data with dlt;
-- using merge semantics for idempotent ingestion;
-- storing analytical data in DuckDB;
-- building staging and mart models with dbt;
-- writing data quality tests;
-- preserving historical data without creating duplicates;
-- running the complete workflow from one command.
-
----
-
-## Example Successful Run
-
-A complete successful execution includes:
-
-```text
-ENTSO-E ingestion
-    ✓ API request successful
-    ✓ 96 observations parsed
-    ✓ dlt load completed
-
-dbt build
-    ✓ PASS=7
-    ✓ WARN=0
-    ✓ ERROR=0
-
-Daily report
-    ✓ historical daily prices generated
-
-PIPELINE COMPLETED SUCCESSFULLY
-```
+`API integration` · `XML parsing` · `timezone handling` · `retry/backoff` · `idempotent ingestion` · `data modeling` · `data quality` · `application logging` · `fail-fast orchestration`
