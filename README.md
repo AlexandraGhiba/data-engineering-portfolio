@@ -198,27 +198,6 @@ Analytical Marts
 dbt Tests
 ```
 
-### Results
-
-| Metric | Result |
-|---|---:|
-| Raw trips processed | **669,724** |
-| Analytical fact rows | **669,493** |
-| Period | **Jan–Mar 2024** |
-| dbt validation | **12 PASS · 1 WARN · 0 ERROR** |
-
-### Engineering Features
-
-- Parameterized monthly **Airflow orchestration**
-- Parquet partitioning by `year` and `month`
-- Incremental `fct_trips` keyed by `ride_id`
-- **SCD Type 2** station history
-- Time-aware station foreign keys
-- Station imbalance and monthly usage marts
-- Station rename / relocation analysis
-- Automated dbt data-quality tests
-- Idempotent monthly processing
-
 **Key concepts:** orchestration · incremental processing · SCD Type 2 · temporal modeling · idempotency · data quality
 
 **Stack:** `Python` `Apache Airflow` `Parquet` `DuckDB` `dbt` `SQL` `Docker`
