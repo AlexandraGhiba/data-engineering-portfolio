@@ -122,13 +122,6 @@ dim_date ─── fact_orders ─── dim_product
 
 **Fact grain:** one row per source order line.
 
-**Results:**
-
-- **9,994** fact rows
-- **5,009** distinct orders
-- **1,894** products
-- **793** customers
-- **32 / 32 dbt tests passing**
 
 **Key concepts:** Star Schema · dimensional modeling · surrogate keys · fact/dimension design · Apache Airflow orchestration · Docker · automated data quality · warehouse validation
 
